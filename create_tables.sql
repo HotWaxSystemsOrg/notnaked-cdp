@@ -1,7 +1,7 @@
 -- Universal Data Model (UDM) compliant schema for NotNaked CDP
 
 -- =========================
--- PARTY TABLES
+-- PARTY
 -- =========================
 
 -- Stores all parties: individuals or organizations
@@ -28,7 +28,22 @@ CREATE TABLE person (
 CREATE TABLE org (
     party_id VARCHAR(30) PRIMARY KEY,
     org_name VARCHAR(100),
-    org_group_size LONG,
+    org_group_size BIGINT,
+    FOREIGN KEY (party_id) REFERENCES party(party_id)
+);
+
+-- =========================
+-- PARTY IDENTIFICATION
+-- =========================
+
+-- Stores external identifiers for a party (Shopify, CRM, etc.)
+CREATE TABLE party_identification (
+    party_id VARCHAR(30) NOT NULL,
+    party_identification_type_id VARCHAR(30) NOT NULL, -- SHOPIFY_CUSTOMER_ID
+    id_value VARCHAR(100) NOT NULL,                     -- 7194277478653
+    from_date DATE NOT NULL,
+    thru_date DATE,
+    PRIMARY KEY (party_id, party_identification_type_id, from_date),
     FOREIGN KEY (party_id) REFERENCES party(party_id)
 );
 
@@ -47,6 +62,22 @@ CREATE TABLE party_role (
 );
 
 -- =========================
+-- PARTY SUBSCRIPTION
+-- =========================
+
+-- Stores marketing and communication subscriptions for a party
+CREATE TABLE party_subscription (
+    party_id VARCHAR(30) NOT NULL,
+    subscription_type_id VARCHAR(30) NOT NULL,  -- SMS_MARKETING
+    subscription_status_id VARCHAR(30) NOT NULL, -- SUBSCRIBED / NOT_SUBSCRIBED
+    subscription_source VARCHAR(30) NOT NULL,   -- SHOPIFY
+    from_date DATE NOT NULL,
+    thru_date DATE,
+    PRIMARY KEY (party_id, subscription_type_id, from_date),
+    FOREIGN KEY (party_id) REFERENCES party(party_id)
+);
+
+-- =========================
 -- CONTACT MECHANISMS
 -- =========================
 
@@ -54,15 +85,14 @@ CREATE TABLE party_role (
 CREATE TABLE contact_mech (
     contact_mech_id VARCHAR(30) PRIMARY KEY,
     contact_mech_type_id VARCHAR(30) NOT NULL, -- EMAIL, PHONE, POSTAL_ADDRESS
-    contact_mech_purpose_id VARCHAR(30) NOT NULL, -- PRIMARY_EMAIL, HOME_PHONE, SHIPPING_ADDRESS
     email_string VARCHAR(100) -- Used only when type is EMAIL
 );
 
 -- Phone-specific contact details
 CREATE TABLE phone_number (
     contact_mech_id VARCHAR(30) PRIMARY KEY,
-    country_code VARCHAR(4) NOT NULL,
-    phone_number VARCHAR(10) NOT NULL,
+    country_code VARCHAR(5) NOT NULL,
+    phone_number VARCHAR(15) NOT NULL,
     FOREIGN KEY (contact_mech_id) REFERENCES contact_mech(contact_mech_id)
 );
 
@@ -82,7 +112,7 @@ CREATE TABLE postal_address (
 CREATE TABLE party_contact_mech (
     party_id VARCHAR(30),
     contact_mech_id VARCHAR(30),
-    contact_mech_purpose_id VARCHAR(30), -- BILLING, SHIPPING, PERSONAL, etc.
+    contact_mech_purpose_id VARCHAR(30) NOT NULL, -- PRIMARY_EMAIL, HOME_PHONE, SHIPPING_ADDRESS, BILLING_ADDRESS, etc.
     from_date DATE NOT NULL,
     thru_date DATE,
     PRIMARY KEY (party_id, contact_mech_id),
@@ -94,7 +124,7 @@ CREATE TABLE party_contact_mech (
 -- ENUMERATIONS (LOOKUPS)
 -- =========================
 
--- For enumerations like party role, gender, party type, status, user-login permission etc.
+-- For enumerations like party role, gender, party type, status, user-login permission, party identification, etc.
 CREATE TABLE enumeration (
     enum_id VARCHAR(30) PRIMARY KEY, -- ACTIVE
     enum_type_id VARCHAR(30), -- PARTY_STATUS
